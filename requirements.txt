@@ -1,0 +1,10 @@
+pandas
+requests
+openai
+python-dotenv
+selenium
+undetected-chromedriver
+openpyxl
+beautifulsoup4
+google-generativeai
+openai
