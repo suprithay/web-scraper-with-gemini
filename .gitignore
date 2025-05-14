@@ -1,0 +1,23 @@
+# Ignore Python environment and config files
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Ignore VS Code settings (optional)
+.vscode/
+
+# Ignore environment variables file
+.env
+*.env
+
+# Ignore output files
+*.log
+*.xlsx
+*.json
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
