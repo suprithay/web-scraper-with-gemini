@@ -1,10 +1,15 @@
 # gemini_extractor.py
 
 import os
-from google import genai
+import google.generativeai as genai
 import re
 import json
 from config import GEMINI_API_KEY
+from google import genai
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 def extract_deals_with_gemini(html_content: str) -> list:
     gemini_api_key = os.getenv('GEMINI_API_KEY')  # Reads from .env file
