@@ -5,13 +5,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GOOGLE_SHEET_EDIT_URL = (
-    "https://docs.google.com/spreadsheets/"
-    "d/1PBnfjxAqdKdU-XBP6Mh4AhEkOzN332HF6mU2zNbM2gM/export?format=csv"
+    "https://docs.google.com/spreadsheets/d/17J8924SiMAMKsPHC_iSZlJTMWlFq0ER-hBaW6ajPTB4/edit?usp=sharing"
 )
 
 FIRM_COL, URL_COL = "PE Firm", "URL"
-JSON_OUT = "scraped_results.json"
-EXCEL_OUT = "scraped_results.xlsx"
+JSON_OUT = "testing.json"
+EXCEL_OUT = "testing.xlsx"
 scraped_urls = set()
 
 PROMPT = """

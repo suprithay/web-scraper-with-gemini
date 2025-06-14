@@ -10,7 +10,7 @@ from helper import sheet_to_csv_url
 from helper import parse_money
 from config import (JSON_OUT, GOOGLE_SHEET_EDIT_URL, FIRM_COL, URL_COL, EXCEL_COLUMNS, EXCEL_OUT)
 from helper import map_to_excel
-
+from save_deals import save_file
 
 def main():
     # Load existing data if it exists
@@ -57,7 +57,9 @@ def main():
                 revenue = parse_money(deal.get("revenue"))
                 ebitda = parse_money(deal.get("ebitda"))
                 asking_price = parse_money(deal.get("askingPrice"))
-                ebitdaMargin = round(ebitda / revenue, 2) if ebitda and revenue else None
+                #ebitdaMargin = round(ebitda / revenue, 2) if ebitda and revenue else None
+                ebitdaMargin = round((ebitda / revenue) * 100, 2) if ebitda and revenue else None
+
                 gross_revenue = revenue  # assuming same as revenue for now
 
                 # Prepare and append data to Excel & JSON
@@ -91,15 +93,13 @@ def main():
                 all_data.append(data)
                 existing_keys.add(key)
 
-            # Save data in JSON format
-            with open(JSON_OUT, "w") as f:
-                json.dump(all_data, f, indent=4)
-
-            # Save data in Excel format
-            pd.DataFrame([map_to_excel(x) for x in all_data], columns=EXCEL_COLUMNS).to_excel(EXCEL_OUT, index=False)
+            save_file(all_data, JSON_OUT, EXCEL_OUT, EXCEL_COLUMNS, map_to_excel)
             print("Deals saved to excel sheet")
         except Exception as e:
             print(f"Error scraping {firm_name}: {e}")
+             # 🔥 Save what has been collected so far before crashing
+            save_file(all_data, JSON_OUT, EXCEL_OUT, EXCEL_COLUMNS, map_to_excel)
+            print(f"Emergency save done after crash on {firm_name}")
 
 if __name__ == "__main__":
     main()
