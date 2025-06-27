@@ -4,6 +4,7 @@ import re
 import hashlib
 from config import COLUMN_MAPPING
 import undetected_chromedriver as uc
+
 def parse_money(value):
     if not value or not isinstance(value, str):
         return None
@@ -25,10 +26,8 @@ def parse_money(value):
     except ValueError:
         return None
 
-
 def create_undetected_driver(headless=False):
     options = uc.ChromeOptions()
-
     if headless:
         options.add_argument("--headless=new")  # Use the new headless mode
     options.add_argument("--no-sandbox")
@@ -36,10 +35,8 @@ def create_undetected_driver(headless=False):
     options.add_argument("--disable-gpu")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--start-maximized")
-
     driver = uc.Chrome(options=options)
     return driver
-
 
 # -----------------------------------------------------------------------------
 # HELPERS
@@ -50,9 +47,20 @@ def sheet_to_csv_url(edit_url: str) -> str:
         raise ValueError("Invalid Google Sheet URL")
     return f"https://docs.google.com/spreadsheets/d/{m.group(1)}/export?format=csv"
 
-
 def hash_content(content):
     return hashlib.md5(content.encode('utf-8')).hexdigest()
 
 def map_to_excel(item):
     return {COLUMN_MAPPING[k]: v for k, v in item.items() if k in COLUMN_MAPPING}
+
+def add_unique_deals(deals: list, seen_keys: set) -> list:
+        new_deals = []
+        for deal in deals:
+            key = (deal.get("title"), deal.get("dealCaption"))
+            if key not in seen_keys:
+                if any(bad_word in (deal.get("dealCaption") or "").lower()
+                       for bad_word in ["sold", "inactive", "off market", "not available"]):
+                    continue
+                seen_keys.add(key)
+                new_deals.append(deal)
+        return new_deals

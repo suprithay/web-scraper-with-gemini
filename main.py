@@ -11,6 +11,7 @@ from helper import parse_money
 from config import (JSON_OUT, GOOGLE_SHEET_EDIT_URL, FIRM_COL, URL_COL, EXCEL_COLUMNS, EXCEL_OUT)
 from helper import map_to_excel
 from save_deals import save_file
+from url_description_updater import update_deals
 
 def main():
     # Load existing data if it exists
@@ -20,9 +21,14 @@ def main():
     else:
         existing_data = []
 
-    # Track (firm, dealCaption) pairs to avoid duplicates
+    # Track (firm, URL, dealCaption) triplets to avoid duplicates
     existing_keys = {
-        (d["brokerage"], d["dealCaption"]) for d in existing_data
+        (
+            d.get("brokerage", "").strip(),
+            d.get("sourceWebsite", "").strip(),
+            d.get("dealCaption", "").strip()
+        )
+        for d in existing_data
     }
 
     df = pd.read_csv(sheet_to_csv_url(GOOGLE_SHEET_EDIT_URL))
@@ -31,18 +37,19 @@ def main():
     for index, row in df.iterrows():
         firm_name = str(row.get(FIRM_COL)).strip()
         url = str(row.get(URL_COL)).strip()
-        
-        # Skip if any deal from this firm already exists
-        if any(firm_name == d["brokerage"] for d in existing_data):
-            print(f"Skipping already scraped: {firm_name}")
+        deal_caption = str(row.get("Deal Caption", "")).strip()
+
+        # Skip if this firm + URL + dealCaption combo was already scraped
+        if (firm_name, url, deal_caption) in existing_keys:
+            print(f"⏩ Skipping already scraped: {firm_name} — {url} — {deal_caption}")
             continue
+
+        print(f"🔍 Scraping {firm_name} — {url} — {deal_caption}")
         
-        print(f"Scraping {firm_name} - {url}")
-
         try:
-            contact_info = scrape_contacts_with_selenium(url, firm_name)
             deals = scrape_all_deals_with_pagination(url)
-
+            contact_info = scrape_contacts_with_selenium(url, firm_name)
+            
             if not deals:
                 print(f"No deals found for {firm_name}")
                 continue
@@ -57,7 +64,6 @@ def main():
                 revenue = parse_money(deal.get("revenue"))
                 ebitda = parse_money(deal.get("ebitda"))
                 asking_price = parse_money(deal.get("askingPrice"))
-                #ebitdaMargin = round(ebitda / revenue, 2) if ebitda and revenue else None
                 ebitdaMargin = round((ebitda / revenue) * 100, 2) if ebitda and revenue else None
 
                 gross_revenue = revenue  # assuming same as revenue for now
@@ -71,7 +77,7 @@ def main():
                     "email": contact_info.get("Email") if contact_info else None,
                     "linkedinUrl": contact_info.get("LinkedIn URL") if contact_info else None,
                     "workPhone": contact_info.get("Work Phone") if contact_info else None,
-                    "dealCaption": deal_caption,
+                    "dealCaption": deal.get("title") or deal_caption,
                     "revenue": revenue,
                     "ebitda": ebitda,
                     "title": deal.get("title") or None,
@@ -80,7 +86,7 @@ def main():
                     "ebitdaMargin": ebitdaMargin,
                     "industry": deal.get("industry") or "Not Found",
                     "dealType": "MANUAL",
-                    "sourceWebsite": url,
+                    "sourceWebsite": deal.get("sourceWebsite"),
                     "companyLocation": contact_info.get("Company Location") if contact_info else None,
                     "createdAt": datetime.utcnow().isoformat() + "Z",
                     "updatedAt": datetime.utcnow().isoformat() + "Z",
@@ -103,3 +109,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    update_deals()
