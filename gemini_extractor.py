@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 def extract_deals_with_gemini(html_content: str) -> list:
     gemini_api_key = os.getenv('GEMINI_API_KEY')  # Reads from .env file
     if not gemini_api_key:
@@ -39,7 +38,7 @@ def extract_deals_with_gemini(html_content: str) -> list:
             "ebitda": "$200,000",
             "askingPrice": "$500,000",
             "industry": "Industry Name",
-            "dealCaption": "Brief caption or summary"
+            "dealCaption": "Brief summary of the deal"
             }
         ]
         }
@@ -49,7 +48,6 @@ def extract_deals_with_gemini(html_content: str) -> list:
             model="gemini-2.0-flash", 
             contents=f"{prompt}\n\n{html_content}"
         )
-
         # Extract JSON from markdown code block
         match = re.search(r"```json\n(.*?)\n```", response.text, re.DOTALL)
         if match:

@@ -16,15 +16,14 @@ def scrape_all_deals_with_pagination(start_url: str) -> list:
     scraped_urls.add(start_url)
     driver = create_undetected_driver()
     driver.get(start_url)
-    time.sleep(10)
-
+    wait = WebDriverWait(driver, 15)
+    wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
     all_deals = []
     page_num = 1
     seen_deal_keys = set()
     seen_hashes = set()
     prev_url = driver.current_url
-    wait = WebDriverWait(driver, 10)
-
+    
     def add_unique_deals(deals: list, seen_keys: set) -> list:
         new_deals = []
         for deal in deals:
@@ -99,9 +98,12 @@ def scrape_all_deals_with_pagination(start_url: str) -> list:
                 print("⚠️ Duplicate content detected — stopping.")
                 break
             seen_hashes.add(html_hash)
-
+            current_page_url = driver.current_url
+            wait = WebDriverWait(driver, 15)
             deals = extract_deals_with_gemini(html)
             new_deals = add_unique_deals(deals, seen_deal_keys)
+            for deal in new_deals:
+                deal["sourceWebsite"] = current_page_url
 
             if not new_deals:
                 print("❌ No new deals found — might be finished.")
@@ -111,15 +113,19 @@ def scrape_all_deals_with_pagination(start_url: str) -> list:
                 lazy_load_tries = 3
                 for i in range(lazy_load_tries):
                     print(f"⏳ Waiting for lazy-loaded deals... ({i+1}/{lazy_load_tries})")
-                    time.sleep(5)
+                    wait = WebDriverWait(driver, 15)
                     html_after_wait = driver.page_source
                     html_hash_after_wait = hash_content(html_after_wait)
                     if html_hash_after_wait != html_hash:
                         print("🆕 New content loaded after passive wait.")
                         html = html_after_wait
                         html_hash = html_hash_after_wait
+                        current_page_url = driver.current_url
+                        wait = WebDriverWait(driver, 15)
                         deals = extract_deals_with_gemini(html)
                         new_deals = add_unique_deals(deals, seen_deal_keys)
+                        for deal in new_deals:
+                            deal["sourceWebsite"] = current_page_url
                         if new_deals:
                             print(f"✅ Found {len(new_deals)} new deals after passive wait.")
                             all_deals.extend(new_deals)
@@ -130,8 +136,6 @@ def scrape_all_deals_with_pagination(start_url: str) -> list:
             else:
                 print(f"✅ Found {len(new_deals)} new deals on page {page_num}.")
                 all_deals.extend(new_deals)
-
-            
 
             # === Try "Load More" ===
             try:
@@ -155,7 +159,6 @@ def scrape_all_deals_with_pagination(start_url: str) -> list:
             except:
                 print("❌ No 'Load More' found or clickable.")
 
-            
             # === Try infinite scroll ===
             scroll_height_before = driver.execute_script("return document.body.scrollHeight")
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -171,7 +174,7 @@ def scrape_all_deals_with_pagination(start_url: str) -> list:
             # === Try numbered pagination ===
             try:
                 next_page_xpath = f"//a[normalize-space(text())='{page_num + 1}']"
-                next_button = WebDriverWait(driver, 5).until(
+                next_button = WebDriverWait(driver, 15).until(
                     EC.element_to_be_clickable((By.XPATH, next_page_xpath))
                 )
                 print(f"➡️ Clicking numbered page {page_num + 1}")
@@ -179,7 +182,6 @@ def scrape_all_deals_with_pagination(start_url: str) -> list:
                 time.sleep(5)
                 next_button.click()
                 time.sleep(5)
-
                 current_url = driver.current_url
                 if current_url == prev_url:
                     print("⚠️ URL did not change — possibly looping.")
@@ -204,7 +206,6 @@ def scrape_all_deals_with_pagination(start_url: str) -> list:
                 time.sleep(5)
                 next_button.click()
                 time.sleep(5)
-
                 current_url = driver.current_url
                 if current_url == prev_url:
                     print("⚠️ URL did not change — possibly last page.")
@@ -222,13 +223,16 @@ def scrape_all_deals_with_pagination(start_url: str) -> list:
                     driver.execute_script("arguments[0].scrollIntoView(true);", next_arrow)
                     time.sleep(5)
                     next_arrow.click()
-                    time.sleep(5)
-
+                    wait = WebDriverWait(driver, 15)
                     html = driver.page_source
                     html_hash = hash_content(html)
+                    current_page_url = driver.current_url
                     if html_hash not in seen_hashes:
+                        wait = WebDriverWait(driver, 15)
                         deals = extract_deals_with_gemini(html)
                         new_deals = add_unique_deals(deals, seen_deal_keys)
+                        for deal in new_deals:
+                            deal["sourceWebsite"] = current_page_url
                         print(f"✅ Found {len(new_deals)} new deals from '>' arrow.")
                         all_deals.extend(new_deals)
                         seen_hashes.add(html_hash)
@@ -240,20 +244,22 @@ def scrape_all_deals_with_pagination(start_url: str) -> list:
             # === Type B: Scroll inside a scrollable deal list container ===
             try:
                 scrollable_container = driver.find_element(By.CSS_SELECTOR, "div[style*='overflow: auto'], div[style*='overflow-y: scroll'], div.scrollable, .deal-list")
-
                 scroll_attempts = 3
                 scrolled = False
 
                 for _ in range(scroll_attempts):
                     driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", scrollable_container)
-                    time.sleep(5)
-
+                    wait = WebDriverWait(driver, 15)
+                    current_page_url = driver.current_url
                     html = driver.page_source
                     html_hash = hash_content(html)
                     if html_hash not in seen_hashes:
                         print("🌀 Inner scroll loaded new content.")
+                        wait = WebDriverWait(driver, 15)
                         deals = extract_deals_with_gemini(html)
                         new_deals = add_unique_deals(deals, seen_deal_keys)
+                        for deal in new_deals:
+                            deal["sourceWebsite"] = current_page_url
                         if new_deals:
                             all_deals.extend(new_deals)
                             seen_hashes.add(html_hash)

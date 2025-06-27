@@ -9,8 +9,8 @@ GOOGLE_SHEET_EDIT_URL = (
 )
 
 FIRM_COL, URL_COL = "PE Firm", "URL"
-JSON_OUT = "testing.json"
-EXCEL_OUT = "testing.xlsx"
+JSON_OUT = "AmericanHealthcare_deals.json"
+EXCEL_OUT = "AmericanHealthcare_deals.xlsx"
 scraped_urls = set()
 
 PROMPT = """
